@@ -38,7 +38,6 @@ function action3_mu ()
     ensure_msys2_devel \
         && msys2_extra_clone \
         && msys2_extra_build_and_install_package gmime3 \
-        && msys2_extra_build_and_install_package xapian-core \
         && msys2_extra_build_and_install_package mu \
         && emacs_extensions="$mu_zip_file $emacs_extensions" \
         && msys2_extra_package mu-git "/" "glib2 xapian-core gmime3" "$mu_zip_file"
@@ -291,8 +290,12 @@ sha512sums=('f28209acae12a42a345382668f7f7da7a2ce5a08362d0e2af63c9f94cb2adca9536
 
 build() {
     cd ${pkgname}-${pkgver}
+    LDFLAGS+=" -fstack-protector"
+    CXXFLAGS+=" -std=gnu++14"
+
     autoreconf --install -f --verbose
     ./configure --prefix=/usr --disable-dependency-tracking
+
     make
 }
 
