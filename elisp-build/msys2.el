@@ -30,7 +30,10 @@
 (defvar msys2-checksum "971f247546d1c7f92e711650136004a4f54119ce3131fe558112e24d69d0d352"
   "Sha of msys installation file.")
 
-(defvar msys2-installation-dir "C:\\msys64\\"
+(defvar msys2-base-dir "C:/"
+  "Directory where msys2 is installed.")
+
+(defvar msys2-installation-dir (concat msys2-base-dir "msys64/")
   "Directory where msys2 is installed.")
 
 (defvar msys2-cmd "../scripts/msys2.cmd")
@@ -66,21 +69,26 @@
     (save-match-data
       (with-temp-file pacman-conf
             (insert-file-contents-literally pacman-conf)
+            ;; create backup file probably we don't need this in the final iteration
             (if (not (file-exists-p backup-file))
                 (copy-file pacman-conf backup-file))
             (while  (search-forward "CheckSpace" nil t)
               (replace-match "#CheckSpace"))))))
 
-(setq msys2-installation-dir "c:/msys64/")
-
 (defun msys2-perform-installation ()
   "Install msys2 install."
-  (eb-download-file msys2-url msys2-file)
+  ;;; Download the file only if we don't have it
+  (if (not (file-exists-p msys2-file))
+        (eb-download-file msys2-url msys2-file))
   (cond ((string-equal (eb-checksum msys2-file) msys2-checksum)
-         (msys2-install "c:/")
+         (msys2-install msys2-base-dir)
+         (msys2--disable-pacman-disk-space msys2-installation-dir)
+         (msys2-pacman-upgrade "**upgrade-buffer**")
+         (shell-command "taskkill /f /fi 'MODULES EQ msys-2.0.dll'")
+         ;; after the upgrade we need to re-desable the packman disk space.
          (msys2--disable-pacman-disk-space msys2-installation-dir)
          (msys2-pacman-upgrade "**upgrade-buffer**"))
-        (t (message "Checksum not matching"))))
+        (t (message (format "Checksum not matching please delete %s" (expand-file-name msys2-file))))))
 
 ;; (msys2--remove msys2-installation-dir)
 ;; (msys2-pacman-upgrade "**upgrade-buffer**")
