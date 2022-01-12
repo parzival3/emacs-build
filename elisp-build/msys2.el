@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
 ;; Homepage: https://github.com/ento/mys2-installation
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "27.2"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -18,6 +18,20 @@
 ;;  simple package for installing msys2
 ;;
 ;;; Code:
+(require 'cl-lib)
+
+;;; TODO: this doesn't belong here
+(defvar file-directory (file-name-directory (or load-file-name
+                                                (buffer-file-name)))
+  "The directory of this file.")
+
+(defun add-to-load-path ()
+  "Add this directory to the load path."
+        (setq load-path (cons file-directory load-path)))
+
+(add-to-load-path)
+;;; Need this to make ~ working
+(setenv "HOME" (getenv "USERPROFILE"))
 
 (require 'eb)
 
@@ -36,9 +50,10 @@
 (defvar msys2-installation-dir (concat msys2-base-dir "msys64/")
   "Directory where msys2 is installed.")
 
-(defvar msys2-cmd "../scripts/msys2.cmd")
+(defvar msys2-cmd (concat file-directory "../scripts/msys2.cmd"))
 
 (defun msys2--debug-shell ()
+  "Function for debugging the msys2 shell."
   (interactive)
   (let ((explicit-shell-file-name (expand-file-name msys2-cmd)))
     (message (format "Running shell %s" explicit-shell-file-name))
@@ -46,12 +61,10 @@
 
 (defun msys2-run (command &optional buffer)
   "Run msys2 COMMAND and capture the output in the BUFFER."
-  (let ((final-command (format "%s -c '%s'" (expand-file-name msys2-cmd) command)))
-    ;; For debug  (message (format "This is the command %s" final-command))
-    (shell-command final-command buffer)))
+   (eb-shcc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer))
 
 (defun msys2-pacman-upgrade (&optional buffer)
-  "Run pacman upgrade without confirmation."
+  "Run pacman upgrade without confirmation &optional you can specify the output BUFFER."
   (msys2-run "pacman --noprogressbar --noconfirm -Syuu" buffer))
 
 (defun msys2-install (directory)
@@ -60,7 +73,10 @@
     (eb--powershell (format "%s -y" msys2-file))))
 
 (defun msys2--remove (directory)
-  (delete-directory directory t))
+  "Remove the msys2 installation, DIRECTORY should be the msys directory."
+  (if (not (string-match "msys64" directory))
+      (error "The path should contain the msys64 string")
+    (delete-directory directory t)))
 
 (defun msys2--disable-pacman-disk-space (installation-path)
   "Function for optimizing pacman config of msys2 installed in INSTALLATION-PATH."
@@ -75,23 +91,29 @@
             (while  (search-forward "CheckSpace" nil t)
               (replace-match "#CheckSpace"))))))
 
+
+;; This doesn't belong here, this file should abstract the msys operations not the full installation of msys
 (defun msys2-perform-installation ()
   "Install msys2 install."
   ;;; Download the file only if we don't have it
-  (if (not (file-exists-p msys2-file))
+  (if (not (file-exists-p (expand-file-name msys2-file)))
         (eb-download-file msys2-url msys2-file))
   (cond ((string-equal (eb-checksum msys2-file) msys2-checksum)
-         (msys2-install msys2-base-dir)
+         (if (not (file-exists-p msys2-installation-dir))
+             (msys2-install msys2-base-dir))
          (msys2--disable-pacman-disk-space msys2-installation-dir)
-         (msys2-pacman-upgrade "**upgrade-buffer**")
+         (msys2-pacman-upgrade)
+         (print "Killing the dll")
          (shell-command "taskkill /f /fi 'MODULES EQ msys-2.0.dll'")
-         ;; after the upgrade we need to re-desable the packman disk space.
+         (print "Re-disable pacman disk space")
          (msys2--disable-pacman-disk-space msys2-installation-dir)
-         (msys2-pacman-upgrade "**upgrade-buffer**"))
+         (print "Re run the upgrade")
+         (msys2-pacman-upgrade))
         (t (message (format "Checksum not matching please delete %s" (expand-file-name msys2-file))))))
 
 ;; (msys2--remove msys2-installation-dir)
 ;; (msys2-pacman-upgrade "**upgrade-buffer**")
 ;; (msys2-perform-installation)
+;; (msys2-run "echo \"hi\"" "*Messages*")
 (msys2-perform-installation)
 ;;; msys2.el ends here
