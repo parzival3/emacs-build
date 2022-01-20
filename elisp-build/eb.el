@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
 ;; Homepage: https://github.com/ento/eb
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "27.2"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -19,41 +19,48 @@
 ;;
 ;;; Code:
 
-(defun eb-shcc (command &optional buffer)
-  "Emacs Build Shell Command Capture. Run a the COMMAND and output to BUFFER.
-to the standard output if we are in batch mode."
-  (cond (noninteractive
-         (let ((result nil)
-               (buffer (if (not buffer) "*eb-shell-command*" buffer)))
-           (print (format "running: %s" command))
-           (setq result (shell-command command buffer))
-           (print (eb--buffer-content-string buffer))
-           result))
-        (t (shell-command command buffer))))
+(defvar eb-file-directory (file-name-directory (or load-file-name
+                                                (buffer-file-name)))
+  "The directory of this file.")
 
-(defun eb-strip-new-line (string)
-  "Strip the new line from the current STRING."
-  (replace-regexp-in-string "\n" "" string))
+(defun eb-add-to-load-path ()
+  "Add this directory to the load path."
+        (setq load-path (cons eb-file-directory load-path)))
 
-(defun eb--buffer-content-string (buffer)
-  "Internal function for getting the content of the BUFFER as a string."
-   (with-current-buffer buffer
-                     (buffer-substring-no-properties (point-min) (point-max))))
+;;; Need this to make ~ working
+(setenv "HOME" (getenv "USERPROFILE"))
 
-(defun eb--powershell (command &optional buffer)
-  "Internal: run the powershell COMMAND.
-If BUFFER not null the command output will be displayed into the BUFFER"
-  (eb-shcc (format "powershell.exe %s" command) buffer))
+(eb-add-to-load-path)
 
-(defun eb-download-file (url filename)
-  "Simple function for downloading a FILENAME fro URL."
-  (eb--powershell (format "Invoke-WebRequest -Uri %s -OutFile %s" url filename)))
+(require 'cl-lib)
+(require 'ebl)
+(require 'ps)
+(require 'msys2)
 
-(defun eb-checksum (filename)
-  "Simple function for verify the sha of FILENAME."
-  (let ((out-buffer "**sha-calc**"))
-    (eb--powershell (format "(Get-FileHash %s -Algorithm SHA256)[0].Hash" filename) out-buffer)
-    (downcase (eb-strip-new-line
-               (eb--buffer-content-string out-buffer)))))
+;; This doesn't belong here, this file should abstract the msys operations not the full installation of msys
+(defun eb-perform-installation ()
+  "Install msys2 install."
+  ;;; Download the file only if we don't have it
+  (if (not (file-exists-p (expand-file-name msys2-file)))
+        (ps-download-file msys2-url msys2-file))
+  (cond ((string-equal (ps-checksum msys2-file) msys2-checksum)
+         (if (not (file-exists-p msys2-installation-dir))
+             (msys2-install msys2-base-dir))
+         (msys2--disable-pacman-disk-space msys2-installation-dir)
+         (msys2-pacman-upgrade)
+         (print "Killing the dll")
+         (shell-command "taskkill /f /fi 'MODULES EQ msys-2.0.dll'")
+         (print "Re-disable pacman disk space")
+         (msys2--disable-pacman-disk-space msys2-installation-dir)
+         (print "Re run the upgrade")
+         (msys2-pacman-upgrade))
+        (t (message (format "Checksum not matching please delete %s" (expand-file-name msys2-file))))))
+
+;; (msys2--remove msys2-installation-dir)
+;; (msys2-pacman-upgrade "**upgrade-buffer**")
+;; (msys2-perform-installation)
+;; (msys2-run "echo \"hi\"" "*Messages*")
+(eb-perform-installation)
+
 (provide 'eb)
 ;;; eb.el ends here
