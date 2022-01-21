@@ -19,6 +19,7 @@
 ;;
 ;;; Code:
 
+(require 'env)
 (require 'ebl)
 (require 'subr-x)
 

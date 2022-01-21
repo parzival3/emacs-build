@@ -18,6 +18,7 @@
 ;;  simple package for installing msys2
 ;;
 ;;; Code:
+(require 'env)
 (require 'cl-lib)
 (require 'ps)
 (require 'ebl)
@@ -37,7 +38,27 @@
 (defvar msys2-installation-dir (concat msys2-base-dir "msys64/")
   "Directory where msys2 is installed.")
 
-(defvar msys2-cmd (concat ebl-file-directory "../scripts/msys2.cmd"))
+(defvar msys2-cmd (concat env-file-directory "../scripts/msys2.cmd"))
+
+(defvar msys2-dir ""
+  "Directory of the installation configured by the environment variable of msys2 installation.")
+
+(defvar msys2-architecture ""
+  "Installed msys2 system architecture.")
+
+(defvar msys2-prefix ""
+  "Msys2 prefix for packages to be installed in the system.")
+
+(defvar msys2-build-type ""
+  "Type of build performed by the current msys2 architecture.")
+
+;;; TODO: I should also use the toolchain as a requirement, but the toolchain needs to be
+;;;       defined after the config-build function.
+(defvar msys2-build-packages (list "zip" "unzip" "base-devel" "git" "autoconf" "mingw-libgccjit")
+  "List of software neccessary for each build.")
+
+(defvar msys2-pacman-install-args "-S --noconfirm --needed"
+  "List of argument to use when installing a package.")
 
 (defun msys2--debug-shell ()
   "Function for debugging the msys2 shell."
@@ -48,11 +69,25 @@
 
 (defun msys2-run (command &optional buffer)
   "Run msys2 COMMAND and capture the output in the BUFFER."
-   (ebl-shcc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer))
+  (msys2-run-in-directory command default-directory buffer))
+
+(defun msys2-run-in-directory (command directory &optional buffer)
+  "Run msys2 COMMAND in DIRECTORY.
+Optionally output to BUFFER."
+  (let ((default-directory directory)
+	(result (ebl-shcc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer)))
+    (if (not (equal result 0))
+	(let ((message (format "Command %s failed with %d.\n %s" command result (ebl-buffer-content-string buffer))))
+	  (print message)
+	  (error message)))))
+
+(defun msys2-run-output (command &optional buffer)
+  "Run msys2 COMMAND and capture the output of BUFFER."
+   (ebl-shcc-output (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer))
 
 (defun msys2-pacman-upgrade (&optional buffer)
   "Pacman upgrade without confirmation &optional you can specify the output BUFFER."
-  (msys2-run "pacman --noprogressbar --noconfirm -Syuu" buffer))
+  (msys2-pacman "--noprogressbar --noconfirm -Syuu" buffer))
 
 (defun msys2-install (directory)
   "Install the msys2 command prompt in the DIRECTORY."
@@ -64,6 +99,21 @@
   (if (not (string-match "msys64" directory))
       (error "The path should contain the msys64 string")
     (delete-directory directory t)))
+
+(defun msys2-pacman (command &optional buffer)
+  "Run the pacman COMMAND in BUFFER."
+  (msys2-run (concat "pacman " command) buffer))
+
+(defun msys2-pacman-install-pkg (package)
+  "Install a PACKAGE."
+  (if (consp package)
+      (error "For a list of packages use msys-pacman-install-pkgs function instead")
+    (msys2-pacman-install-pkgs (list package))))
+
+(defun msys2-pacman-install-pkgs (packages)
+  "Install a list of PACKAGES."
+  (msys2-pacman (concat msys2-pacman-install-args " "
+		     (mapconcat #'identity packages " "))))
 
 (defun msys2--disable-pacman-disk-space (installation-path)
   "Function for optimizing pacman config of msys2 installed in INSTALLATION-PATH."
@@ -77,6 +127,49 @@
                 (copy-file pacman-conf backup-file))
             (while  (search-forward "CheckSpace" nil t)
               (replace-match "#CheckSpace"))))))
+
+(defun msys2-get-env-var (envvar)
+  "Get the msys2 ENVVAR variable."
+  (cdr (msys2-run-output (format "echo $%s" envvar))))
+
+(defun msys2--get-architecture ()
+  "Get the installed msys2 architecture."
+  (msys2-get-env-var "MSYSTEM"))
+
+(defun msys2-configure-build (architecture)
+  "Configure current msys2 installation from the ARCHITECTURE type."
+  (setq msys2-dir (file-name-as-directory
+		   (msys2-get-env-var "MINGW_PREFIX")))
+  (cond ((string-equal architecture "MINGW32")
+	 (setq msys2-architecture "i686"
+	       msys2-prefix "mingw-w64-i686"
+	       msys2-build-type "i686-w64-mingw32"))
+	((string-equal architecture "MINGW64")
+	 (setq msys2-architecture "x86_64"
+	       msys2-prefix "mingw-w64-x86_64"
+	       msys2-build-type "x86_64-mingw32"))
+	((string-equal architecture "MSYSTEM")
+	 (error "This tool cannot be run from an MSYS shell.  Please use Mingw64 or Mingw32"))
+	(t (error "Couldn't determine the MSYS architecture"))))
+
+(defun msys2-install-build-packages (prefix packages)
+  "Install the toolchain for PREFIX plus the build PACKAGES."
+  (msys2-pacman-install-pkgs (cons (concat prefix "-toolchain") packages)))
+
+
+
+
+
+;;; Tests ---------------------------------------------------------------------------------------------
+
+(ert-deftest msys2-configure-build-tests ()
+  (should (string-equal "x86_64-mingw32" (msys2-configure-build "MINGW64")))
+  (should (string-equal "i686-w64-mingw32" (msys2-configure-build "MINGW32")))
+  (should-error (msys2-configure-build ""))
+  (should-error (msys2-configure-build "MSYSTEM")))
+
+;;; (msys2-install-build-packages msys2-prefix (list "zip" "unzip" "base-devel" "git"))
+;;; (msys2-pacman-install-pkg "zip")
 
 (provide 'msys2)
 ;;; msys2.el ends here

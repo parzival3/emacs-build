@@ -19,6 +19,7 @@
 ;;
 ;;; Code:
 
+(require 'env)
 (require 'subr-x)
 
 (defun ebl-shcc (command &optional buffer)
@@ -33,6 +34,19 @@ to the standard output if we are in batch mode."
            result))
         (t (shell-command command buffer))))
 
+;;; TODO: finish this
+(defun ebl-string-replace (from to string)
+  "Find and replace the content of a string."
+    (save-match-data
+    (let ((start 0))
+      (while (string-match from input-string start)
+        (setq start (match-end 0))
+        (setq matches (cons (replace-match to nil nil input-string)
+      (reverse matches))))
+
+      (while (search-forward "")))))
+
+	
 (defun ebl-buffer-content-string (buffer)
   "Function for getting the content of the BUFFER as a string."
    (with-current-buffer buffer
@@ -43,6 +57,7 @@ to the standard output if we are in batch mode."
   (let ((work-buffer (if (not buffer) (get-buffer-create "shcc-output")
 		       (t buffer))))
     (with-current-buffer work-buffer
+      (erase-buffer)
       (cons (ebl-shcc command work-buffer)
 	    (string-trim
 	     (ebl-buffer-content-string work-buffer))))))
