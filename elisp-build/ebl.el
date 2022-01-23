@@ -18,9 +18,9 @@
 ;;  Emacs Build package for performing action
 ;;
 ;;; Code:
-
 (require 'env)
 (require 'subr-x)
+
 
 (defun ebl-shcc (command &optional buffer)
   "Emacs Build Shell Command Capture. Run a the COMMAND and output to BUFFER.
@@ -34,34 +34,32 @@ to the standard output if we are in batch mode."
            result))
         (t (shell-command command buffer))))
 
-;;; TODO: finish this
-(defun ebl-string-replace (from to string)
-  "Find and replace the content of a string."
-    (save-match-data
-    (let ((start 0))
-      (while (string-match from input-string start)
-        (setq start (match-end 0))
-        (setq matches (cons (replace-match to nil nil input-string)
-      (reverse matches))))
-
-      (while (search-forward "")))))
-
-	
 (defun ebl-buffer-content-string (buffer)
   "Function for getting the content of the BUFFER as a string."
-   (with-current-buffer buffer
-                     (buffer-substring-no-properties (point-min) (point-max))))
+  (with-current-buffer buffer
+    (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun ebl-shcc-output (command &optional buffer)
   "Similar to ebl-shcc but returns result of COMMAND and output in BUFFER."
   (let ((work-buffer (if (not buffer) (get-buffer-create "shcc-output")
-		       (t buffer))))
+                       buffer)))
     (with-current-buffer work-buffer
       (erase-buffer)
       (cons (ebl-shcc command work-buffer)
-	    (string-trim
-	     (ebl-buffer-content-string work-buffer))))))
-		    
+            (string-trim
+             (ebl-buffer-content-string work-buffer))))))
+
+
+(defun ebl-get-matches (regex input-string &optional n-match)
+  "Apply the REGEX to INPUT-STRING and get the N-MATCH data."
+  (save-match-data
+    (let ((matches nil)
+          (start 0))
+      (while (string-match regex input-string start)
+        (setq start (match-end 0))
+        (setq matches (cons (match-string n-match input-string) matches)))
+      (reverse matches))))
+
 
 (provide 'ebl)
 ;;; ebl.el ends here

@@ -20,13 +20,13 @@
 ;;; Code:
 
 (require 'env)
-(require 'ebl)
-(require 'subr-x)
+(require 'run)
 
-(defun ps-run (command &optional buffer)
+
+(defun ps-run (command)
   "Internal: run the powershell COMMAND.
 If BUFFER not null the command output will be displayed into the BUFFER"
-  (ebl-shcc (format "powershell.exe %s" command) buffer))
+  (run-shc (format "powershell.exe %s" command)))
 
 (defun ps-download-file (url filename)
   "Simple function for downloading a FILENAME fro URL."
@@ -34,9 +34,8 @@ If BUFFER not null the command output will be displayed into the BUFFER"
 
 (defun ps-checksum (filename)
   "Simple function for verify the sha of FILENAME."
-  (let ((out-buffer "**sha-calc**"))
-    (ps-run (format "(Get-FileHash %s -Algorithm SHA256)[0].Hash" filename) out-buffer)
-    (downcase (string-trim (ebl-buffer-content-string out-buffer)))))
+   (downcase (cdr (ps-run (format "(Get-FileHash %s -Algorithm SHA256)[0].Hash" filename)))))
+
 
 (provide 'ps)
 ;;; ps.el ends here

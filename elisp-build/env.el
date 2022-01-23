@@ -1,4 +1,4 @@
-;;; env.el --- Environment for emacs-build -*- lexical-binding: t; -*-
+;;; env.el --- Environment for performing the build -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2022 Enrico Tolotto
 ;;
@@ -19,14 +19,29 @@
 ;;
 ;;; Code:
 
-(defvar env-file-directory (file-name-directory (or load-file-name
-                                                (buffer-file-name)))
+(defcustom env-file-directory-bla (file-name-directory (or load-file-name
+                                                    (buffer-file-name)))
   "The directory of this file.")
 
+(defvar env-file-directory (file-name-directory (or load-file-name
+                                                    (buffer-file-name)))
+  "The directory of this file.")
+
+(defvar env-eb-root (expand-file-name (concat env-file-directory "../"))
+  "The root of this project.")
+
+(defvar env-scripts (expand-file-name (concat env-eb-root "/scripts"))
+  "The scripts folder.")
+
+(defvar env-debug-buffer nil
+  "Buffer to output the result of each shell-command.") 
+
+(defvar env-default-buffer "*Shell Command Output*"
+  "Default buffer where the result of shell command are output.")
 
 (defun env-add-to-load-path ()
   "Add this directory to the load path."
-        (setq load-path (cons env-file-directory load-path)))
+  (setq load-path (cons env-file-directory load-path)))
 
 ;;; Need this to make ~ working
 (setenv "HOME" (getenv "USERPROFILE"))

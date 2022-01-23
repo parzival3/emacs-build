@@ -1,4 +1,4 @@
-;;; msys2.el --- simple package for installing msys2 -*- lexical-binding: t; -*-
+;;; msys2.el --- Simple package for installing msys2 -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2022 Enrico Tolotto
 ;;
@@ -18,10 +18,8 @@
 ;;  simple package for installing msys2
 ;;
 ;;; Code:
-(require 'env)
 (require 'cl-lib)
 (require 'ps)
-(require 'ebl)
 
 (defvar msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
   "Url of the msys installation file.")
@@ -38,10 +36,12 @@
 (defvar msys2-installation-dir (concat msys2-base-dir "msys64/")
   "Directory where msys2 is installed.")
 
-(defvar msys2-cmd (concat env-file-directory "../scripts/msys2.cmd"))
+(defvar msys2-cmd
+  (concat env-file-directory "../scripts/msys2.cmd"))
 
 (defvar msys2-dir ""
-  "Directory of the installation configured by the environment variable of msys2 installation.")
+  "Directory of the installation configured by the environment variable
+of msys2 installation.")
 
 (defvar msys2-architecture ""
   "Installed msys2 system architecture.")
@@ -54,7 +54,7 @@
 
 ;;; TODO: I should also use the toolchain as a requirement, but the toolchain needs to be
 ;;;       defined after the config-build function.
-(defvar msys2-build-packages (list "zip" "unzip" "base-devel" "git" "autoconf" "mingw-libgccjit")
+(defvar msys2-build-packages (list "zip" "unzip" "base-devel" "git" "autoconf")
   "List of software neccessary for each build.")
 
 (defvar msys2-pacman-install-args "-S --noconfirm --needed"
@@ -74,16 +74,17 @@
 (defun msys2-run-in-directory (command directory &optional buffer)
   "Run msys2 COMMAND in DIRECTORY.
 Optionally output to BUFFER."
-  (let ((default-directory directory)
-	(result (ebl-shcc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer)))
+  (let* ((default-directory directory)
+        (result (ebl-shcc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer)))
     (if (not (equal result 0))
-	(let ((message (format "Command %s failed with %d.\n %s" command result (ebl-buffer-content-string buffer))))
-	  (print message)
-	  (error message)))))
+        (let* ((out-buffer (if (not buffer) "*Shell Command Output*" buffer))
+               (message (format "Command %s failed with %d.\n %s" command result (ebl-buffer-content-string buffer))))
+          (print message)
+          (error message)))))
 
 (defun msys2-run-output (command &optional buffer)
   "Run msys2 COMMAND and capture the output of BUFFER."
-   (ebl-shcc-output (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer))
+  (ebl-shcc-output (format "%s -c '%s'" (expand-file-name msys2-cmd) command) buffer))
 
 (defun msys2-pacman-upgrade (&optional buffer)
   "Pacman upgrade without confirmation &optional you can specify the output BUFFER."
@@ -104,6 +105,10 @@ Optionally output to BUFFER."
   "Run the pacman COMMAND in BUFFER."
   (msys2-run (concat "pacman " command) buffer))
 
+(defun msys2-pacman-output (command &optional buffer)
+  "Like msys2-pacman but capture the output of COMMAND in the BUFFER."
+  (msys2-run-output (format "pacman %s" command) buffer))
+
 (defun msys2-pacman-install-pkg (package)
   "Install a PACKAGE."
   (if (consp package)
@@ -113,7 +118,27 @@ Optionally output to BUFFER."
 (defun msys2-pacman-install-pkgs (packages)
   "Install a list of PACKAGES."
   (msys2-pacman (concat msys2-pacman-install-args " "
-		     (mapconcat #'identity packages " "))))
+                        (mapconcat #'identity packages " "))))
+
+(defun msys2-pacman-package-info (package)
+  "Get the PACKAGE info."
+  (cdr (msys2-pacman-output (format "-Qii %s" package)))) 
+
+(defun msys2-pacman-get-deps (package)
+  "Function for getting the dependencies of PACKAGE."
+  (cl-flet ((remove-empty-and-suffix (lambda (package)
+                                       (replace-regexp-in-string "[>=].*" ""
+                                        (replace-regexp-in-string "None" "" package)))))
+    (let ((package-description (msys2-pacman-package-info package)))
+      (mapcar #'remove-empty-and-suffix
+              (mapcan  #'split-string
+                       (ebl-get-matches "Depends on[[:space:]]*: \\(.*\\)" package-description 1))))))
+
+(defun msys2-pacman-get-deps-pkgs (packages)
+  "Return the list of dependency for the list of PACKAGES."
+  (let ((list-of-pkgs (mapconcat #'identity packages " ")))
+    (msys2-pacman-get-deps list-of-pkgs)))
+
 
 (defun msys2--disable-pacman-disk-space (installation-path)
   "Function for optimizing pacman config of msys2 installed in INSTALLATION-PATH."
@@ -121,12 +146,12 @@ Optionally output to BUFFER."
          (backup-file (concat pacman-conf ".bk")))
     (save-match-data
       (with-temp-file pacman-conf
-            (insert-file-contents-literally pacman-conf)
-            ;; create backup file probably we don't need this in the final iteration
-            (if (not (file-exists-p backup-file))
-                (copy-file pacman-conf backup-file))
-            (while  (search-forward "CheckSpace" nil t)
-              (replace-match "#CheckSpace"))))))
+        (insert-file-contents-literally pacman-conf)
+        ;; create backup file probably we don't need this in the final iteration
+        (if (not (file-exists-p backup-file))
+            (copy-file pacman-conf backup-file))
+        (while  (search-forward "CheckSpace" nil t)
+          (replace-match "#CheckSpace"))))))
 
 (defun msys2-get-env-var (envvar)
   "Get the msys2 ENVVAR variable."
@@ -139,23 +164,22 @@ Optionally output to BUFFER."
 (defun msys2-configure-build (architecture)
   "Configure current msys2 installation from the ARCHITECTURE type."
   (setq msys2-dir (file-name-as-directory
-		   (msys2-get-env-var "MINGW_PREFIX")))
+                   (msys2-get-env-var "MINGW_PREFIX/")))
   (cond ((string-equal architecture "MINGW32")
-	 (setq msys2-architecture "i686"
-	       msys2-prefix "mingw-w64-i686"
-	       msys2-build-type "i686-w64-mingw32"))
-	((string-equal architecture "MINGW64")
-	 (setq msys2-architecture "x86_64"
-	       msys2-prefix "mingw-w64-x86_64"
-	       msys2-build-type "x86_64-mingw32"))
-	((string-equal architecture "MSYSTEM")
-	 (error "This tool cannot be run from an MSYS shell.  Please use Mingw64 or Mingw32"))
-	(t (error "Couldn't determine the MSYS architecture"))))
+         (setq msys2-architecture "i686"
+               msys2-prefix "mingw-w64-i686"
+               msys2-build-type "i686-w64-mingw32"))
+        ((string-equal architecture "MINGW64")
+         (setq msys2-architecture "x86_64"
+               msys2-prefix "mingw-w64-x86_64"
+               msys2-build-type "x86_64-mingw32"))
+        ((string-equal architecture "MSYSTEM")
+         (error "This tool cannot be run from an MSYS shell.  Please use Mingw64 or Mingw32"))
+        (t (error "Couldn't determine the MSYS architecture"))))
 
 (defun msys2-install-build-packages (prefix packages)
   "Install the toolchain for PREFIX plus the build PACKAGES."
   (msys2-pacman-install-pkgs (cons (concat prefix "-toolchain") packages)))
-
 
 
 
@@ -170,6 +194,7 @@ Optionally output to BUFFER."
 
 ;;; (msys2-install-build-packages msys2-prefix (list "zip" "unzip" "base-devel" "git"))
 ;;; (msys2-pacman-install-pkg "zip")
+;;(msys2-run-in-directory "ls -al" (expand-file-name "~/Desktop"))
 
 (provide 'msys2)
 ;;; msys2.el ends here

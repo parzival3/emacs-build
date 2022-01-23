@@ -18,9 +18,7 @@
 ;;  Cmd command library
 ;;
 ;;; Code:
-
 (require 'ebl)
-
 
 (defun cmd-run (command &optional buffer)
   "Run the cmd COMMAND on BUFFER."
@@ -28,8 +26,7 @@
 
 (defun cmd-kill (program &rest arguments)
   "Cmd kill PROGRAM"
-
-  (cmd-run (format "taskkill /f %s" arguments)))
+  (cmd-run (format "taskkill /f %s %s" arguments program)))
 
 (defun cmd-function (&rest args)
   (defun cmd--create--command (prop)
@@ -39,8 +36,6 @@
   (let ((copy-args (copy-alist args)))
     (while copy-args)
         (message (pop copy-args))))
-
-(cmd-function 'FI "hello" 'IM '("epos" "manager"))
 
 (provide 'cmd)
 ;;; cmd.el ends here
