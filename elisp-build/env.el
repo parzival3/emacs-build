@@ -19,10 +19,6 @@
 ;;
 ;;; Code:
 
-(defcustom env-file-directory-bla (file-name-directory (or load-file-name
-                                                    (buffer-file-name)))
-  "The directory of this file.")
-
 (defvar env-file-directory (file-name-directory (or load-file-name
                                                     (buffer-file-name)))
   "The directory of this file.")
@@ -30,11 +26,12 @@
 (defvar env-eb-root (expand-file-name (concat env-file-directory "../"))
   "The root of this project.")
 
+;;; TODO remove this
 (defvar env-scripts (expand-file-name (concat env-eb-root "/scripts"))
   "The scripts folder.")
 
 (defvar env-debug-buffer nil
-  "Buffer to output the result of each shell-command.") 
+  "Buffer to output the result of each shell-command.")
 
 (defvar env-default-buffer "*Shell Command Output*"
   "Default buffer where the result of shell command are output.")

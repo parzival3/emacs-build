@@ -1,4 +1,4 @@
-;;; run.el --- library that handles all the shell commands -*- lexical-binding: t; -*-
+;;; run.el --- Library that handles all the shell commands -*- lexical-binding: t; -*-
 ;;
 ;; Copyright (C) 2022 Enrico Tolotto
 ;;
@@ -26,16 +26,17 @@
   "Run the shell COMMAND and return the result and the content of the command.
 Optionally set the directory from where to run the command."
   (let* ((default-directory (if (not directory) default-directory directory))
-	 (result nil)
-	 (buffer (if (not env-debug-buffer) env-default-buffer buffer)))
+         (output "")
+         (result nil)
+         (buffer (if (not env-debug-buffer) env-default-buffer env-debug-buffer)))
     (when noninteractive
       (print (format "running: %s" command)))
     (setq result (shell-command command buffer))
-    (setq output (sl-buffer-content-string buffer)) 
+    (setq output (sl-buffer-content-string buffer))
     (when noninteractive
       ;; Print the output of the buffe
       (print output))
-    (cons result output))) 
+    (cons result output)))
 
 (provide 'run)
 ;;; run.el ends here
