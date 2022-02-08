@@ -7,9 +7,9 @@
 (setq gc-cons-threshold (* 50 1000 1000))
 
 ;;; ------------------------------------------------------------------------------------------
-(setq viper-mode 1)
+(setq-default viper-mode 1)
 (require 'viper)
-
+(viper-mode)
 ;;; Look and feel
 (load-theme 'modus-vivendi)
 (show-paren-mode t)
@@ -30,7 +30,7 @@
 ;;; -------------------------------------------------------------------------------------------
 (with-eval-after-load 'apropos
   (progn (require 'apropos)
-	 (setq apropos-do-all t)))
+	 (setq-default apropos-do-all t)))
 
 
 (defvar init-backup-directory "C:\\Tmp\\"
@@ -44,14 +44,17 @@
 				       (make-directory init-backup-directory t)
 				       (concat (file-name-as-directory init-backup-directory)
 					       (file-name-nondirectory file) ".bk")))
+;; Enable flymake mode for elisp
+(add-hook 'emacs-lisp-mode-hook (lambda () (flymake-mode 1)))
 
-(add-hook 'emacs-lisp-mode-hook (lambda ()
-				  (flymake-mode 1)))
+;; Dired don't show details
+(add-hook 'dired-mode-hook (lambda () (dired-hide-details-mode 1)))
 
-(add-hook 'dired-mode-hook (lambda ()
-			     (dired-hide-details-mode 1)))
+;; Use tab instead of spaces
+(setq-default indent-tabs-mode t)
 
-
+;; Set the tab width to 4
+(setq-default tab-width 4)
 
 ;;; -------------------------------------------------------------------------------------------
 ;;; KEYBINDINGS
@@ -100,25 +103,31 @@ Use it like a defun without lambda-list."
           'delete-trailing-whitespace)
 
 
-(defun capture-filename ()
+;; Hooks for vc-next-action
+(defun commit-filename ()
+"File name to add to the header of a git commit."
   (let* ((root (project-root (project-current)))
-         (file-name  (file-name-sans-extension buffer-file-name)))
+         (file-name (file-name-sans-extension buffer-file-name)))
          (concat (replace-regexp-in-string "/" ":" (file-relative-name file-name root)) ": ")))
 
 (defun insert-preamble (preamble)
+"Insert the PREAMBLE (aka filepath:filename) in the git commit."
   (when (equal (buffer-name) "*vc-log*")
                    (insert preamble)))
 
 (defun vc-log-advice (orig-fun &rest args)
-  (let ((preamble (capture-filename)))
+  "Advice the 'vc-next-action' function with inser-preamble.
+The arguments are ORIG-FUN (vc-next-action) and ARGS the argument
+of 'vc-next-action'."
+  (let ((preamble (commit-filename)))
     (apply orig-fun args)
     (insert-preamble preamble)))
 
+;; Advicing vc-next-action
 (advice-add 'vc-next-action :around #'vc-log-advice)
 
-
 ;; Set the indentation for cpp-mode
-(setq c-basic-offset 4)
+(setq-default c-basic-offset 4)
 (c-add-style "microsoft"
              '("stroustrup"
                (c-offsets-alist
@@ -129,7 +138,7 @@ Use it like a defun without lambda-list."
                 (arglist-cont-nonempty . +)
                 (template-args-cont . +))))
 
-(setq c-default-style (cons '(c++-mode . "microsoft") c-default-style))
+(setq-default c-default-style (cons '(c++-mode . "microsoft") c-default-style))
 
 ;; Useful functions for converting files
 (defun dos2unix ()
@@ -148,8 +157,11 @@ Use it like a defun without lambda-list."
 ;; Load dci package
 (load-file "C:\\Git\\dci-emacs\\dci.el")
 (load-file "C:\\Git\\dci-emacs\\gaming.el")
+(load-file "C:\\Git\\dci-emacs\\msvc.el")
+
 (add-to-list 'load-path "c:/Git/groovy-emacs-modes/")
 (add-to-list 'load-path "c:/Git/jenkins-mode/")
 (add-to-list 'load-path "c:/Git/s.el/")
 (add-to-list 'load-path "c:/Git/dash.el/")
+
 ;;; init.el ends here
