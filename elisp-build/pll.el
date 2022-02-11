@@ -22,7 +22,7 @@
 (defun pll-getr (plist prop)
   "Retrun the value of KEY stored in PLIST or throw an error."
   (if (not (plist-member plist prop))
-      (error (format "plist %s doesn't contain value %s" (symbol-name plist) (symbol-name prop))))
+      (error (format "plist doesn't contain value %s" (symbol-name prop))))
   (plist-get plist prop))
 
 (defun pll-dir (plist prop)
