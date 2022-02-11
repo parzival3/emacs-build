@@ -23,10 +23,10 @@
 (require 'run)
 
 
-(defun ps-run (command)
-  "Internal: run the powershell COMMAND.
+(defun ps-run (command &optional directory)
+  "Internal: run the powershell COMMAND in DIRECTORY.
 If BUFFER not null the command output will be displayed into the BUFFER"
-  (run-shc (format "powershell.exe %s" command)))
+  (run-shc (format "powershell.exe %s" command) directory))
 
 (defun ps-download-file (url filename)
   "Simple function for downloading a FILENAME fro URL."
