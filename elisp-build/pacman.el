@@ -33,7 +33,7 @@
 
 (defun pacman-run (command &optional directory)
   "Run msys2 COMMAND in DIRECTORY."
-  (msys2-run command directory))
+  (msys2-run (format "pacman %s"command) directory))
 
 (defun pacman-run-res (command &optional directory)
   "Run COMMAND in DIRECTORY but only return the result."
