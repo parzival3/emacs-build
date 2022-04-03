@@ -36,8 +36,7 @@
   "Directory where msys2 is installed.")
 
 (defvar in-msys2-dir ""
-  "Directory of the installation configured by the environment variable
-of msys2 installation.")
+  "Directory of the msys2 installation configured by the environment variable of msys2 installation.")
 
 (defvar in-msys2-architecture ""
   "Installed msys2 system architecture.")
@@ -54,7 +53,8 @@ of msys2 installation.")
 ;;; TODO: target, build and host should be the same as in-msys2 architecture.
 
 (defun in-msys2-cmd-script (repository-root)
-  "Script used to correctly setup the msys2 shell."
+  "Script used to correctly setup the msys2 shell.
+REPOSITORY-ROOT is the derictory of emacs-build."
   (concat (file-name-as-directory repository-root) "/scripts/msys2.cmd"))
 
 (defun in-install-msys2 (&rest config)
@@ -63,15 +63,15 @@ This step will extract the content of the file in-msys2-download-file
 into the in-msys2-installation-dir."
   (let* ((directory (pll-dir config :msys2-installation-dir))
          (exe-file (pll-dir config :msys2-download-file))
-         (command (format "%s -y" exe-file)))
-    (msys2-run command directory)))
+         (command (format "%s -o %s -y" exe-file directory)))
+    (ps-run command)))
 
 ;;; TODO: fix this
 (defun in-install-build-packages (prefix packages)
   "Install the toolchain for PREFIX plus the build PACKAGES."
   (msys2-pacman-install-pkgs (cons (concat prefix "-toolchain") packages)))
 
-(defun in-downlaod-msys2 (&rest config)
+(defun in-download-msys2 (&rest config)
   "Download the msys2 exe file using CONFIG."
   (let* ((msys2-url (pll-getr config :msys2-url))
          (msys2-file (pll-dir config :msys2-download-file))
@@ -86,11 +86,14 @@ into the in-msys2-installation-dir."
                   (ps-checksum msys2-file)))
         (error "The checksum for file %s downloaded from %s failed, please remove the file from the directory and retry" msys2-file msys2-url))))
 
-
 ;;; Tests
+(in-download-msys2 :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
+                  :msys2-download-file "~/Downloads/msys.exe"
+                  :msys2-installation-dir in-msys2-installation-dir)
+
 (in-install-msys2 :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
-                   :msys2-download-file "~/Downloads/msys.exe"
-                   :msys2-installation-dir in-msys2-installation-dir)
+                  :msys2-download-file "~/Downloads/msys.exe"
+                  :msys2-installation-dir in-msys2-installation-dir)
 
 (provide 'in)
 ;;; in.el ends here

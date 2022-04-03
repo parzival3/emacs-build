@@ -22,11 +22,20 @@
 (require 'env)
 (require 'run)
 
+(defun ps-run (command &optional directory)
+  "Run psowershell COMMAND in DIRECTORY."
+  (let ((output (run-shc (format "powershell.exe %s" command) directory)))
+    (if (not (equal (car output) 0))
+        (error (format "Command failed with result %d: %s" (car output) (cdr output))))
+    output))
 
-(defun ps-run (command)
-  "Internal: run the powershell COMMAND.
-If BUFFER not null the command output will be displayed into the BUFFER"
-  (run-shc (format "powershell.exe %s" command)))
+(defun ps-run-res (command &optional directory)
+  "Run COMMAND in DIRECTORY but only return the result."
+  (car (ps-run command directory)))
+
+(defun ps-run-output (command &optional directory)
+  "Run COMMAND in DIRECTORY but only return the output buffer."
+  (cdr (ps-run command directory)))
 
 (defun ps-download-file (url filename)
   "Simple function for downloading a FILENAME fro URL."
@@ -34,7 +43,7 @@ If BUFFER not null the command output will be displayed into the BUFFER"
 
 (defun ps-checksum (filename)
   "Simple function for verify the sha of FILENAME."
-   (downcase (cdr (ps-run (format "(Get-FileHash %s -Algorithm SHA256)[0].Hash" filename)))))
+   (downcase (ps-run-output (prin1-to-string (format "(Get-FileHash %s -Algorithm SHA256)[0].Hash" filename)))))
 
 
 (provide 'ps)
