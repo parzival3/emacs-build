@@ -39,7 +39,7 @@
 
 (defun msys2-run (command &optional directory)
   "Run msys2 COMMAND in DIRECTORY."
-  (let ((output (run-shc command directory)))
+  (let ((output (run-shc (format "%s -c '%s'" (expand-file-name msys2-cmd) command) directory)))
     (if (not (equal (car output) 0))
         (error (format "Command failed with result %d: %s" (car output) (cdr output))))
     output))
