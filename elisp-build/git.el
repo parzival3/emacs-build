@@ -24,25 +24,25 @@
 (require 'ebl)
 (require 'msys2)
 
-(defun git-run (command &optional buffer)
-  "Run git COMMAND in BUFFER."
-  (msys2-run (concat "git " command) buffer))
+(defun git-run (command &optional directory)
+  "Run git COMMAND in DIRECTORY."
+  (msys2-run (concat "git " command) directory))
 
 (defun git-clone (repo &optional branch directory options buffer)
   "Clone the REPO in DIRECTORY using BRANCH.
 Optionally set the additional OPTIONS and output BUFFER."
   (let* ((string-options (if (not options) "" options))
-	 (string-branch (if (not branch) "" (concat "-b " branch)))
-	 (string-dir (if (not directory) "" directory))
-	 (command (format "clone %s %s %s %s" string-options repo string-dir string-branch)))
+         (string-branch (if (not branch) "" (concat "-b " branch)))
+         (string-dir (if (not directory) "" directory))
+         (command (format "clone %s %s %s %s" string-options repo string-dir string-branch)))
     (git-run command buffer)))
 
 (defun git-apply-patch (repo-directory patch &optional buffer)
   "Apply PATCH inside the REPO-DIRECTORY.
 Optionally set the defualt BUFFER."
   (let* ((default-directory repo-directory)
-	 (default-args "--ignore-space-change --ignore-whitespace --inaccurate-eof")
-	 (command (format "apply %s %s" default-args patch)))
+         (default-args "--ignore-space-change --ignore-whitespace --inaccurate-eof")
+         (command (format "apply %s %s" default-args patch)))
     (git-run command buffer)))
 
 (defun git-reset-repo (repo-directory &optional buffer)
