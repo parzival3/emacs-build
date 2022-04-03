@@ -27,7 +27,6 @@
 
 (defun msys2-init (msys2-script)
   "Function for configuring the msys2 package using MSYS2-SCRIPT."
-  (message msys2-script)
   (setq msys2-cmd msys2-script))
 
 (defun msys2--debug-shell ()
