@@ -112,7 +112,8 @@ of msys2 installation.")
                                   (:mingw-libtre-git . :mingw-libre))
   "Alist of packages that needs to be replace.")
 
-
+(defvar in-additional-packages (list "zip" "unzip" "base-devel" "git" "autoconf")
+  "List of additional dependencies for installing Emacs.")
 
 ;;; TODO: target, build and host should be the same as in-msys2 architecture.
 
@@ -124,7 +125,7 @@ of msys2 installation.")
   "Install msys2 based on the CONFIG.
 This step will extract the content of the file in-msys2-download-file
 into the in-msys2-installation-dir."
-  (let* ((directory (pll-dir config :msys2-installation-dir))
+  (let* ((directory (pll-dir config :msys2-base-dir))
          (exe-file (pll-dir config :msys2-download-file))
          (command (format "%s -o%s -y" exe-file directory)))
     (ps-run command)))
@@ -173,13 +174,28 @@ into the in-msys2-installation-dir."
   (replace-regexp-in-string ":mingw" (concat "mingw-w64-" msys2-arch)
                             (symbol-name symbol-package)))
 
-(defun in-requireq-packages-features (&rest config)
+(defun in-required-packages-features (&rest config)
   "Use the list of features described in CONFIG for building Emacs."
   (cl-flet ((transformer (lambda (feature)
                            (in-symbol-to-package (cdr (assoc feature in-emacs-features))
                                                  (pll-getr config :msys2-arch)))))
-    (mapcar #'transformer (pll-getr config :emacs-features))))
+    (let ((features (pll-getr config :emacs-features)))
+      (mapcar #'transformer features))))
 
+(defun in-install-dependencies (&rest config)
+  "Install the dependencies described in CONFIG."
+  (pacman-install-pkgs (append (pll-getr config :msys2-build-packages)
+                               (in-required-packages-features config))))
+
+(defun in-clone-emacs (&rest config)
+  "Clone the Emacs repository in the directory specified by CONFIG."
+  (git-clone (pll-getr config :emacs-repo)
+             (pll-getr config :emacs-branch)
+             (pll-getr config :emacs-dir)))
+
+(defun in-configure-emacs (config)
+  "Run autogen in Emacs directory from CONFIG."
+  (msys2-run "./autogen.sh" (pll-getr config :emacs-dir)))
 
 
 (defmacro in-perform-installation (&rest configuration)
@@ -203,24 +219,28 @@ into the in-msys2-installation-dir."
 ;;                            :emacs-features in-emacs-default-features
 ;;                            :emacs-removed-features in-emacs-default-removed-features )
 
-(in-downlaod-msys2   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
+
+(defvar in-config- '(:msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
                      :msys2-arch "x86_64" ;; This can be either x86_64 or i686
                      :msys2-download-file "~/Downloads/msys.exe"
+                     :msys2-base-dir in-msys2-base-dir
                      :msys2-installation-dir in-msys2-installation-dir
                      :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
                      :msys2-packages in-msys2-required-packages
                      :emacs-features in-emacs-default-features
-                     :emacs-removed-features in-emacs-default-removed-features)
+                     :emacs-removed-features in-emacs-default-removed-features
+                     :emacs-repo in-emacs-repo
+                     :emacs-branch in-emacs-branch
+                     :emacs-dir in-emacs-dir
+                     :msys2-build-packages in-additional-packages))
 
-(in-install-msys2   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
-                     :msys2-arch "x86_64" ;; This can be either x86_64 or i686
-                     :msys2-download-file "~/Downloads/msys.exe"
-                     :msys2-installation-dir in-msys2-base-dir
-                     :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
-                     :msys2-packages in-msys2-required-packages
-                     :emacs-features in-emacs-default-features
-                     :emacs-removed-features in-emacs-default-removed-features)
-
+(in-downlaod-msys2 in-config-)
+(in-install-msys2 in-config-)
+(in-configure-msys2 in-config-)
+(in-configure-pacman in-config-)
+(in-install-dependencies in-config-)
+(in-clone-emacs in-config-)
+(in-configure-emacs in-config-)
 
 (provide 'in)
 ;;; in.el ends here
