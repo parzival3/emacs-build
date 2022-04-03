@@ -25,9 +25,10 @@
 (defvar msys2-cmd ""
   "Command for running the msys2 shell.")
 
-(defun msys2-init (&rest config)
-  "Function for configuring the msys2 package using CONFIG."
-  (setq msys2-cmd (pll-getr config :msys2-cmd-script)))
+(defun msys2-init (msys2-script)
+  "Function for configuring the msys2 package using MSYS2-SCRIPT."
+  (message msys2-script)
+  (setq msys2-cmd msys2-script))
 
 (defun msys2--debug-shell ()
   "Function for debugging the msys2 shell."
@@ -59,6 +60,10 @@
   "Get the installed msys2 architecture."
   (msys2-get-env "MSYSTEM"))
 
+(defun msys2-kill-dll ()
+  "Command to kill the msys2 dll before upgrading pacman."
+  (car (run-shc "taskkill /f /fi 'MODULES EQ msys-2.0.dll'")))
+
 ;;; TODO: I don't like the shape of this function.
 (defun msys2-configure-build (architecture)
   "Configure current msys2 installation from the ARCHITECTURE type."
@@ -81,9 +86,6 @@
     (list :msys2-dir msys2-dir :msys2-arch msys2-arch
           :msys2-prefix msys2-prefix :msys2-build-type msys2-build-type)))
 
-(defun msys2-install-build-packages (prefix packages)
-  "Install the toolchain for PREFIX plus the build PACKAGES."
-  (msys2-pacman-install-pkgs (cons (concat prefix "-toolchain") packages)))
 
 
 
