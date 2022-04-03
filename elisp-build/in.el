@@ -126,8 +126,8 @@ This step will extract the content of the file in-msys2-download-file
 into the in-msys2-installation-dir."
   (let* ((directory (pll-dir config :msys2-installation-dir))
          (exe-file (pll-dir config :msys2-download-file))
-         (command (format "%s -y" exe-file)))
-    (ps-run command directory)))
+         (command (format "%s -o%s -y" exe-file directory)))
+    (ps-run command)))
 
 (defun in-msys2-installed? (&rest config)
   "Check if the msys2 is already installed in the path specified in CONFIG."
@@ -194,15 +194,32 @@ into the in-msys2-installation-dir."
      (in-configure-pacman ,@configuration)))
 
 
-(in-perform-installation   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
-                           :msys2-arch "x86_64" ;; This can be either x86_64 or i686
-                           :msys2-download-file "~/Downloads/msys.exe"
-                           :msys2-installation-dir in-msys2-installation-dir
-                           :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
-                           :msys2-packages in-msys2-required-packages
-                           :emacs-features in-emacs-default-features
-                           :emacs-removed-features in-emacs-default-removed-features )
+;; (in-perform-installation   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
+;;                            :msys2-arch "x86_64" ;; This can be either x86_64 or i686
+;;                            :msys2-download-file "~/Downloads/msys.exe"
+;;                            :msys2-installation-dir in-msys2-installation-dir
+;;                            :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
+;;                            :msys2-packages in-msys2-required-packages
+;;                            :emacs-features in-emacs-default-features
+;;                            :emacs-removed-features in-emacs-default-removed-features )
 
+(in-downlaod-msys2   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
+                     :msys2-arch "x86_64" ;; This can be either x86_64 or i686
+                     :msys2-download-file "~/Downloads/msys.exe"
+                     :msys2-installation-dir in-msys2-installation-dir
+                     :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
+                     :msys2-packages in-msys2-required-packages
+                     :emacs-features in-emacs-default-features
+                     :emacs-removed-features in-emacs-default-removed-features)
+
+(in-install-msys2   :msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
+                     :msys2-arch "x86_64" ;; This can be either x86_64 or i686
+                     :msys2-download-file "~/Downloads/msys.exe"
+                     :msys2-installation-dir in-msys2-base-dir
+                     :msys2-cmd-script (concat env-eb-root "scripts/msys2.cmd")
+                     :msys2-packages in-msys2-required-packages
+                     :emacs-features in-emacs-default-features
+                     :emacs-removed-features in-emacs-default-removed-features)
 
 
 (provide 'in)
