@@ -9,7 +9,7 @@
 ;; Version: 0.0.1
 ;; Keywords: abbrev bib c calendar comm convenience data docs emulations extensions faces files frames games hardware help hypermedia i18n internal languages lisp local maint mail matching mouse multimedia news outlines processes terminals tex tools unix vc wp
 ;; Homepage: https://github.com/ento/pll
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "27.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -21,9 +21,13 @@
 
 (defun pll-getr (plist prop)
   "Retrun the value of KEY stored in PLIST or throw an error."
-  (if (not (plist-member plist prop))
+  (let ((f-plist (flatten-list plist)))
+    (if (not (plist-member f-plist prop))
       (error (format "plist doesn't contain value %s" (symbol-name prop))))
-  (plist-get plist prop))
+    (condition-case nil
+        (symbol-value (plist-get f-plist prop))
+      (error
+      (plist-get f-plist prop)))))
 
 (defun pll-dir (plist prop)
   "Retrun the value of KEY stored in PLIST and transform it into a file name."
