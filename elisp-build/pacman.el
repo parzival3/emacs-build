@@ -73,22 +73,45 @@
 (defun pacman-package-info (package)
   "Get the PACKAGE info.
 PACKAGE can also be a list of packages."
-  (cdr (pacman-run-output (format "-Qii %s" package))))
+  (pacman-run-output (format "-Qii %s" package)))
+
+(defun pacman-remove-package-suffix (package)
+  "Function for removing the PACKAGE suffix.
+This can be for example a nuber of a 'constrain' >= 3.2."
+(replace-regexp-in-string "[>=].*" ""
+   (replace-regexp-in-string "None" "" package)))
 
 (defun pacman-get-deps (package)
   "Function for getting the dependencies of PACKAGE."
-  (cl-flet ((remove-empty-and-suffix (lambda (package)
-                                       (replace-regexp-in-string "[>=].*" ""
-                                                                 (replace-regexp-in-string "None" "" package)))))
-    (let ((package-description (pacman-package-info package)))
-      (mapcar #'remove-empty-and-suffix
-              (mapcan  #'split-string
-                       (ebl-get-matches "Depends on[[:space:]]*: \\(.*\\)" package-description 1))))))
+  (let ((package-description (pacman-package-info package)))
+    (mapcar #'pacman-remove-package-suffix
+            (mapcan #'split-string
+                    (ebl-get-matches "Depends on[[:space:]]*: \\(.*\\)" package-description 1)))))
 
 (defun pacman-get-deps-pkgs (packages)
   "Return the list of dependency for the list of PACKAGES."
   (let ((list-of-pkgs (mapconcat #'identity packages " ")))
     (pacman-get-deps list-of-pkgs)))
+
+(defun pacman--invalid-package? (package)
+  "Function returnting if the current PACKAGE is valid or not."
+  (if (and (not (string-equal package ""))
+           (cl-search "mingw" package))
+      t
+    nil))
+
+(defun pacman-get-all-dependencies (packages)
+  "Function that keep iterating until all the dependencies of PACKAGES are listed."
+  (let ((new-packages packages)
+        (old-packages ()))
+    (while (cl-set-difference new-packages old-packages :test #'string-equal)
+      (setq old-packages new-packages)
+      (setq new-packages
+            (cl-remove-if #'pacman--invalid-package?
+                          (cl-remove-duplicates
+                           (append new-packages (pacman-get-deps-pkgs new-packages))
+                           :test #'string-equal))))
+    new-packages))
 
 (provide 'pacman)
 ;;; pacman.el ends here
