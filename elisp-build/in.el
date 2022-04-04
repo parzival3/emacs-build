@@ -172,7 +172,7 @@ into the in-msys2-installation-dir."
   "Configure msys2 library in order to use a provided script using CONFIG."
   (msys2-init (pll-getr config :msys2-cmd-script)))
 
-(defun in-symbol-to-package (symbol-package msys2-arch)
+(defun in--symbol-to-package (symbol-package msys2-arch)
   "Convert a SYMBOL-PACKAGE to a string with the proper MSYS2-ARCH."
   (replace-regexp-in-string ":mingw" (concat "mingw-w64-" msys2-arch)
                             (symbol-name symbol-package)))
@@ -180,8 +180,8 @@ into the in-msys2-installation-dir."
 (defun in-required-packages-features (&rest config)
   "Use the list of features described in CONFIG for building Emacs."
   (cl-flet ((transformer (lambda (feature)
-                           (in-symbol-to-package (cdr (assoc feature in-emacs-features))
-                                                 (pll-getr config :msys2-arch)))))
+                           (in--symbol-to-package (cdr (assoc feature in-emacs-features))
+                                                  (pll-getr config :msys2-arch)))))
     (let ((features (pll-getr config :emacs-features)))
       (mapcar #'transformer features))))
 
@@ -240,6 +240,37 @@ TODO: Check why we have some null value printed, Most likely compress install."
   (msys2-run (format "make -j%s install" (pll-getr config :emacs-build-threads))
              (pll-getr config :emacs-dir)))
 
+(defun in-strip-install (config)
+  "Strip Emacs binary to reduce the size of the installation CONFIG."
+  (let ((executables (directory-files (concat (pll-getr config :emacs-installation-dir) "/bin") t ".exe")))
+    (while executables
+      (msys2-run (format "strip -g --strip-unneeded %s" (pop executables))))))
+
+(defun in-copy-missing-file-in-directory (config)
+  "Finsih the Emacs installation by copying the missing files into the installation folder CONFIG."
+  (let ((libgmp-files (directory-files (concat (pll-dir config :msys2-installation-dir)
+                                               (pll-getr config :msys2-bin-dir)
+                                               "/bin") t "libgmp")))
+    ;;; Copy libgmp files
+    (while libgmp-files
+      (copy-file (pop libgmp-files) (concat (pll-dir config :emacs-installation-dir) "bin/")))
+
+    (make-directory (concat (pll-dir config :emacs-installation-dir) "/usr/share/emacs/site-lisp/") t)
+    (copy-file (concat (pll-dir config :emacs-installation-dir) "/share/emacs/site-lisp/subdirs.el")
+               (concat (pll-dir config :emacs-installation-dir) "/usr/share/emacs/site-lisp/subdirs.el"))
+    (copy-file (concat env-scripts "/site-start.el")
+               (concat (pll-dir config :emacs-installation-dir) "/share/emacs/site-lisp/"))))
+
+(defun in--fix-dependencies (replacements packages arch)
+  "Replace the packages in the REPLACEMENTS into the list of PACKAGES and ARCH.
+For example '((\"libwinpthread-git\" \"libwinpthread\"))."
+  (let ((str-rep (mapcar (lambda (pkg) (cons (in--symbol-to-package (car pkg) arch)
+                                             (in--symbol-to-package (cdr pkg) arch))) replacements)))
+    (cl-delete-duplicates
+     (append (mapcar #'car str-rep)
+             (cl-set-difference packages (mapcar #'cdr str-rep) :test #'string-equal)) :test #'string-equal)))
+
+
 
 (defmacro in-perform-installation (&rest configuration)
   "Perform the full Emacs installtion following the CONFIGURATION."
@@ -266,6 +297,7 @@ TODO: Check why we have some null value printed, Most likely compress install."
 (defvar in-config- '(:msys2-url "https://github.com/msys2/msys2-installer/releases/download/2021-11-30/msys2-base-x86_64-20211130.sfx.exe"
                      :msys2-arch "x86_64" ;; This can be either x86_64 or i686
                      :msys2-target "x86_64-w64-mingw32"
+                     :msys2-bin-dir "mingw64"
                      :msys2-download-file "~/Downloads/msys.exe"
                      :msys2-base-dir in-msys2-base-dir
                      :msys2-installation-dir in-msys2-installation-dir
@@ -285,14 +317,16 @@ TODO: Check why we have some null value printed, Most likely compress install."
 
 ;; (in-downlaod-msys2 in-config-)
 ;; (in-install-msys2 in-config-)
-(in-configure-msys2 in-config-)
+;; (in-configure-msys2 in-config-)
 ;; (in-configure-pacman in-config-)
 ;; (in-install-dependencies in-config-)
 ;; (in-clone-emacs in-config-)
 ;; (in-run-autogen-emacs in-config-)
 ;; (in-configure-emacs in-config-)
-(in-build-emacs in-config-)
-(in-install-emacs in-config-)
+;; (in-build-emacs in-config-)
+;; (in-install-emacs in-config-)
+;; (in-copy-missing-file-in-directory in-config-)
+;; (in-strip-install in-config-)
 
 (provide 'in)
 ;;; in.el ends here
