@@ -89,7 +89,7 @@ function check_mingw_architecture ()
 
 function ensure_mingw_build_software ()
 {
-    local build_packages="zip unzip base-devel ${mingw_prefix}-toolchain"
+    local build_packages="zip unzip base-devel ${mingw_prefix}-toolchain libtool cmake"
     pacman -S --noconfirm --needed $build_packages >/dev/null 2>&1
     if test "$?" != 0; then
         echo Unable to install $build_packages
@@ -175,7 +175,19 @@ function action0_clean_rest ()
     exit 0
 }
 
-function action0_clone ()
+function build_libvterm ()
+{
+    cd $emacs_build_root
+    git clone git@github.com:akermu/emacs-libvterm.git libvterm
+    pushdir libvterm
+    mkdir build
+    pushdir build
+    cmake ../
+    make -j4
+    popd -1
+}
+
+function 0_clone ()
 {
     clone_repo "$emacs_branch" "$emacs_repo" "$emacs_source_dir" "$emacs_branch_name" "$emacs_depth"
     if test "$emacs_apply_patches" = "yes"; then
@@ -474,7 +486,7 @@ while test -n "$*"; do
         --build) add_actions action1_ensure_packages action2_build;;
         --deps) add_actions action1_ensure_packages action3_package_deps;;
         --pack-emacs) add_actions action2_install action4_package_emacs;;
-        --pack-all) add_actions action1_ensure_packages action3_package_deps action2_install action5_package_all;;
+        --pack-all) add_actions action1_ensure_packages action3_package_deps action2_install action5_package_all build_libvterm;;
         # --pack-all) add_actions action1_ensure_packages action2_install;;
 
         --pdf-tools) add_actions action2_install action3_pdf_tools;;
