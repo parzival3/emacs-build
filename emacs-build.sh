@@ -187,7 +187,7 @@ function build_libvterm ()
     popd -1
 }
 
-function 0_clone ()
+function action0_clone ()
 {
     clone_repo "$emacs_branch" "$emacs_repo" "$emacs_source_dir" "$emacs_branch_name" "$emacs_depth"
     if test "$emacs_apply_patches" = "yes"; then
