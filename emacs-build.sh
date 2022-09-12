@@ -177,7 +177,7 @@ function action0_clean_rest ()
 
 function build_libvterm ()
 {
-    cd $emacs_build_root
+    cd $emacs_build_zip_dir
     git clone git@github.com:akermu/emacs-libvterm.git libvterm
     pushdir libvterm
     mkdir build
