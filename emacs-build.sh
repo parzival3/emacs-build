@@ -179,12 +179,12 @@ function build_libvterm ()
 {
     cd $emacs_build_zip_dir
     git clone git@github.com:akermu/emacs-libvterm.git libvterm
-    pushdir libvterm
+    cd libvterm
     mkdir build
-    pushdir build
+    cd build
     cmake ../
     make -j4
-    popd -1
+    cd ../../
 }
 
 function action0_clone ()
